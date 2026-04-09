@@ -15,11 +15,8 @@ const (
 )
 
 type URLCheck struct {
-	ID uuid.UUID
-	URL string
-	Status URLStatus
-	CreatedAt time.Time
+	ID        uuid.UUID `json:"id"`
+	URL       string    `json:"url"`
+	Status    URLStatus `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
-
-
-
