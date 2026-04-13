@@ -1,4 +1,37 @@
 services:
+  antifraud-server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ./server
+    ports:
+      - 8080:8080
+    environment:
+      - HTTP_PORT=8080
+      - PG_DSN=postgres://user:password@antifraud-db:5432/antifraud?sslmode=disable
+      - KAFKA_BROKERS=kafka:29092
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      antifraud-db:
+        condition: service_healthy
+    networks:
+      - backend_net
+
+  antifraud-worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ./worker
+    environment:
+      - PG_DSN=postgres://user:password@antifraud-db:5432/antifraud?sslmode=disable
+      - KAFKA_BROKERS=kafka:29092
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - backend_net
+
   antifraud-db:
     image: postgres:16-alpine
     container_name: antifraud-db
@@ -28,9 +61,25 @@ services:
     volumes:
       - redis_data:/data
 
+  redis-ui:
+    image: rediscommander/redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
   kafka:
     image: confluentinc/cp-kafka:latest
     container_name: antifraud-kafka
+    healthcheck:
+      test:
+        ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
     ports:
       - "9092:9092"
     environment:
@@ -45,6 +94,8 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     networks:
       - backend_net
 

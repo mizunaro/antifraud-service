@@ -7,12 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mizunaro/antifraud-service/internal/app"
 	"github.com/mizunaro/antifraud-service/internal/config"
+	"github.com/mizunaro/antifraud-service/internal/worker"
 )
 
 func main() {
-	// Инициализируем конфиг
 	cfg, err := config.New()
 	if err != nil {
 		log.Fatalf("config init failed: %v", err)
@@ -26,7 +25,7 @@ func main() {
 	defer stop()
 
 	// Запускаем основной цикл приложения
-	if err := app.Run(ctx, cfg); err != nil {
-		log.Fatalf("application finished with error: %v", err)
+	if err := worker.Run(ctx, cfg); err != nil {
+		log.Fatalf("worker finished with error: %v", err)
 	}
 }

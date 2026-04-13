@@ -13,10 +13,11 @@ type (
 		HTTP     HTTPConfig
 		Postgres PostgresConfig
 		Kafka    KafkaConfig
+		Redis    RedisConfig
 	}
 
 	AppConfig struct {
-		Name    string `envconfig:"APP_NAME" default:"antifraud-service"`
+		Name    string `envconfig:"APP_NAME"    default:"antifraud-service"`
 		Version string `envconfig:"APP_VERSION" default:"1.0.0"`
 	}
 
@@ -29,8 +30,15 @@ type (
 	}
 
 	KafkaConfig struct {
-		Brokers []string `envconfig:"KAFKA_BROKERS" default:"localhost:9092"`
-		Topic   string   `envconfig:"KAFKA_TOPIC"   default:"urls_to_check"`
+		Brokers []string `envconfig:"KAFKA_BROKERS"  default:"localhost:9092"`
+		Topic   string   `envconfig:"KAFKA_TOPIC"    default:"urls_to_check"`
+		GroupID string   `envconfig:"KAFKA_GROUP_ID" default:"antifraud-workers"`
+	}
+
+	RedisConfig struct {
+		Addr     string `envconfig:"REDIS_ADDR"     default:"localhost:6379"`
+		Password string `envconfig:"REDIS_PASSWORD" default:""`
+		DB       int    `envconfig:"REDIS_DB"       default:"0"`
 	}
 )
 
