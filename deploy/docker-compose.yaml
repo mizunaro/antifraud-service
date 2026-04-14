@@ -14,6 +14,8 @@ services:
     depends_on:
       antifraud-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - backend_net
 
@@ -70,13 +72,14 @@ services:
       - REDIS_PORT=6379
     depends_on:
       - redis
+    networks:
+      - backend_net
 
   kafka:
     image: confluentinc/cp-kafka:latest
     container_name: antifraud-kafka
     healthcheck:
-      test:
-        ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/9092'"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -96,6 +99,38 @@ services:
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - backend_net
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    ports:
+      - "8082:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - backend_net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: antifraud-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - backend_net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: antifraud-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
       - backend_net
 

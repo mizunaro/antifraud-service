@@ -12,10 +12,10 @@ import (
 	"github.com/mizunaro/antifraud-service/internal/repository"
 	"github.com/mizunaro/antifraud-service/internal/service"
 	http_transport "github.com/mizunaro/antifraud-service/internal/transport/http"
-	"github.com/mizunaro/antifraud-service/internal/transport/kafka"
+	kafka_transport "github.com/mizunaro/antifraud-service/internal/transport/kafka"
 )
 
-func Run(ctx context.Context, c *config.Config) error {
+func RunAPI(ctx context.Context, c *config.Config) error {
 	// Инициализация ресурсов (Postgres, Kafka)
 	repo, err := repository.NewPostgresDB(ctx, c.Postgres.DSN)
 	if err != nil {
@@ -23,7 +23,7 @@ func Run(ctx context.Context, c *config.Config) error {
 	}
 	defer repo.Close()
 
-	producer := kafka.NewProducer(c.Kafka.Brokers, c.Kafka.Topic)
+	producer := kafka_transport.NewProducer(c.Kafka.Brokers, c.Kafka.Topic)
 	defer producer.Close()
 
 	svc := service.New(repo, producer)

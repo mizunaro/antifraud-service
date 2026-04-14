@@ -1,10 +1,10 @@
-package kafka
+package service
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand/v2"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -12,16 +12,23 @@ import (
 
 	"github.com/mizunaro/antifraud-service/internal/domain"
 	"github.com/mizunaro/antifraud-service/internal/repository"
+	kafka_transport "github.com/mizunaro/antifraud-service/internal/transport/kafka"
 )
 
 type Worker struct {
-	consumer     *Consumer
+	consumer     *kafka_transport.Consumer
 	postgresRepo *repository.PostgresRepo
 	redisRepo    *repository.RedisRepo
+	badWords     []string
 }
 
-func NewWorker(c *Consumer, p *repository.PostgresRepo, r *repository.RedisRepo) *Worker {
-	return &Worker{consumer: c, postgresRepo: p, redisRepo: r}
+func NewWorker(
+	c *kafka_transport.Consumer,
+	p *repository.PostgresRepo,
+	r *repository.RedisRepo,
+	b []string,
+) *Worker {
+	return &Worker{consumer: c, postgresRepo: p, redisRepo: r, badWords: b}
 }
 
 func (w *Worker) Start(ctx context.Context) error {
@@ -52,29 +59,41 @@ func (w *Worker) processMessage(ctx context.Context, msg kafka.Message) error {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 
+	isCacheHit := false
 	status, _ := w.redisRepo.GetStatus(ctx, check.URL)
 
 	if status == domain.StatusPending {
-		log.Info().Str("url", check.URL).Msg("Cache miss, analyzing...")
-
-		time.Sleep(1 * time.Second)
-		status = domain.URLStatus(rand.IntN(2) + 1)
-
-		if err := w.redisRepo.SetStatus(ctx, check.URL, status, 24*time.Hour); err != nil {
-			log.Warn().Err(err).Msg("failed to save status to redis")
-		}
+		status = w.analyze(check.URL)
+		_ = w.redisRepo.SetStatus(ctx, check.URL, status, 24*time.Hour)
 	} else {
-		log.Info().Str("url", check.URL).Msg("Cache hit! Skipping analysis")
+		isCacheHit = true
 	}
+
+	processedURLs.WithLabelValues(fmt.Sprintf("%d", status), fmt.Sprintf("%v", isCacheHit)).Inc()
 
 	if err := w.postgresRepo.UpdateStatus(ctx, check.ID, status); err != nil {
 		return fmt.Errorf("postgresRepo.UpdateStatus: %w", err)
 	}
 
 	log.Info().
+		Str("component", "worker").
 		Str("id", check.ID.String()).
+		Str("url", check.URL).
 		Int("status", int(status)).
-		Msg("URL check completed and saved")
+		Bool("cache_hit", isCacheHit).
+		Msg("URL processing finished")
 
 	return w.consumer.Commit(ctx, msg)
+}
+
+func (w *Worker) analyze(rawURL string) domain.URLStatus {
+	url := strings.ToLower(rawURL)
+
+	for _, badWord := range w.badWords {
+		if strings.Contains(url, badWord) {
+			return domain.StatusMalicious
+		}
+	}
+
+	return domain.StatusSafe
 }

@@ -26,7 +26,7 @@ func main() {
 	defer stop()
 
 	// Запускаем основной цикл приложения
-	if err := app.Run(ctx, cfg); err != nil {
+	if err := app.RunAPI(ctx, cfg); err != nil {
 		log.Fatalf("application finished with error: %v", err)
 	}
 }

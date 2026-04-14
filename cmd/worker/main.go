@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/mizunaro/antifraud-service/internal/app"
 	"github.com/mizunaro/antifraud-service/internal/config"
-	"github.com/mizunaro/antifraud-service/internal/worker"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	defer stop()
 
 	// Запускаем основной цикл приложения
-	if err := worker.Run(ctx, cfg); err != nil {
+	if err := app.RunWorker(ctx, cfg); err != nil {
 		log.Fatalf("worker finished with error: %v", err)
 	}
 }

@@ -1,12 +1,13 @@
-package kafka
+package kafka_transport
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
-	"github.com/mizunaro/antifraud-service/internal/domain"
 	kafka "github.com/segmentio/kafka-go"
+
+	"github.com/mizunaro/antifraud-service/internal/domain"
 )
 
 type Producer struct {

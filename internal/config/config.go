@@ -14,6 +14,7 @@ type (
 		Postgres PostgresConfig
 		Kafka    KafkaConfig
 		Redis    RedisConfig
+		Worker   WorkerConfig
 	}
 
 	AppConfig struct {
@@ -39,6 +40,10 @@ type (
 		Addr     string `envconfig:"REDIS_ADDR"     default:"localhost:6379"`
 		Password string `envconfig:"REDIS_PASSWORD" default:""`
 		DB       int    `envconfig:"REDIS_DB"       default:"0"`
+	}
+
+	WorkerConfig struct {
+		BadWords []string `envconfig:"WORKER_BAD_WORDS" default:"casino,crypto,free-money,win-prizes"`
 	}
 )
 
